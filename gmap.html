@@ -1,0 +1,128 @@
+
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" charset="utf-8"/>
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+      #info {
+        position: absolute;
+        width:20%;
+        height:100%;
+        bottom:0px;
+        right:0px;
+        top:0px;
+        background-color: white;
+        border-left:1px #666 solid;
+        font-family:Helvetica;
+      }
+      #info div {
+        padding:0px;
+        padding-left:10px;
+        margin:0px;
+      }
+      #info div h1 {
+        margin-top:10px;
+        font-size:16px;
+      }
+      #info div p {
+        font-size:14px;
+        color:#333;
+      }
+    </style>
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js">
+    </script>
+	<script type="text/javascript" src="http://api.map.baidu.com/api?v=1.4"></script> 
+
+    <script type="text/javascript">
+    map=null;
+	planes=[];
+	function put(a){
+		console.log("put");
+		//if(a.lat!=null&&a.lon!=null){
+		var point = new BMap.Point(a.lon,a.lat);  
+		a.point=point;
+		var marker=null;
+		var date=(new Date).toLocaleTimeString();
+	//	BMap.Convertor.translate(points,1,function(){
+		marker = new BMap.Marker(point,{'title':a.hex+"\n"+a.flight+"\nalt:"+a.altitude+"\nspeed:"+a.speed+"\nlat,lon:"+a.lat+","+a.lon+"\ntime(on your computer):"+date});  
+		var label=new BMap.Label(a.flight);
+		label.setStyle({  
+			 height:"12px",                                 //给label设置样式，任意的CSS都是可以的
+    fontSize:"10px"});
+    marker.setLabel(label);
+		marker.addEventListener("mouseover", function(){
+			var sstring=a.hex+"<br>"+a.flight+"<br>alt:"+a.altitude+"<br>speed:"+a.speed+"<br>lat,lon:"+a.lat+","+a.lon+"<br>time(on your computer):"+date;
+			$("#geninfo").html(sstring);
+		});
+		map.addOverlay(marker);
+	//});
+		return a;  
+	//}
+	}
+	function pick(a){
+	for(var i=0;i<planes.length;i++){
+	if(planes[i].hex==a){
+		return planes[i];
+	}
+	return null;
+	}
+	}
+	function still(a,b){
+	if(a.hex==b.hex&&a.flight==b.flight&&a.altitude==b.altitude&&a.speed==b.speed&&a.lat==b.lat&&a.lon==b.lon){
+		return true;
+	}else{
+		return false;
+	}
+	}
+	function link(a,b){
+		new BMap.Polyline([a,new BMap.Point(b.lon, b.lat)],{strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5});
+		map.addOverlay(polyline);
+	}
+		
+	function refresh(){
+	$.get("./data.json",function(data){
+		for(var i=0;i<data.length;i++){
+			data[i].point=null;
+			data[i].marker=null;
+			if(pick(data[i].hex)!=null){
+			if(!still(data[i],pick(data[i].hex))){
+				if(data[i].lat!=null&&data[i].lon!=null){
+					
+					data[i]=put(data[i]);
+				}
+				if(pick(data[i].hex).point!=null){
+		//			link(pick(data[i].hex).point,data[i]);
+				}
+			}else{
+				data[i]=pick(data[i].hex);
+		}
+		
+		}
+	}
+		planes=data;
+	});
+	}
+
+    function initialize() {
+	map = new BMap.Map("container");    
+	map.centerAndZoom(new BMap.Point(116.404, 39.915), 6);
+	map.enableScrollWheelZoom(true); 
+        window.setInterval(function() {
+		refresh();
+        }, 1000);
+    }
+    </script>
+  </head>
+  <body onload="initialize()">
+    <div id="container" style="width:80%; height:100%"></div>
+    <div id="info">
+      <div>
+        <h1>Dump1090 风起</h1>
+        <div id="geninfo"></div>
+        <p id="selinfo">Move mouse on a plane marker for info.</p>
+      </div>
+    </div>
+  </body>
+</html>
